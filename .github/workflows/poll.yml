@@ -1,0 +1,31 @@
+name: Polling
+
+on:
+  workflow_dispatch:
+  schedule:
+  - cron: "*/15 * * * *"
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: '0'
+    - uses: 'actions/setup-python@v4'
+      with:
+        python-version: '3.9'
+        cache: 'pip' # caching pip dependencies
+    - run: pip install -r requirements.txt
+    - run: python fetch.py
+    - run: |
+        git config user.name "Automated"
+        git config user.email "actions@users.noreply.github.com"
+
+        n=$(git log --format='%ad' --date=short --since=yesterday | grep "$(date -I)" | wc -l)
+        git reset --soft "HEAD~${n}"
+
+        git add data/
+        git commit -m "Import at $(date -I)" || exit 0
+        git push origin main -f
+
